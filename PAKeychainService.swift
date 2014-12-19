@@ -25,41 +25,43 @@ private let _sharedService = PAKeychainService()
 
 
 class PAKeychainService: NSObject {
-
-    class var sharedService: PAKeychainService {
+    
+    class func sharedService() -> PAKeychainService {
         return _sharedService
     }
-
-
+    
+    
     func saveContentsForKey(value: String, key: String) {
-        let service = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleIdentifier") as String
+        
         let dataFromString = value.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)!
-
-        let keychainQuery = NSMutableDictionary(objects: [kSecClassGenericPasswordValue, service,              key,                  dataFromString],
+        
+        let keychainQuery = NSMutableDictionary(objects: [kSecClassGenericPasswordValue, serviceString(),      key,                  dataFromString],
                                                 forKeys: [kSecClassValue,                kSecAttrServiceValue, kSecAttrAccountValue, kSecValueDataValue])
-
+        
         SecItemDelete(keychainQuery as CFDictionaryRef)
         SecItemAdd(keychainQuery as CFDictionaryRef, nil)
     }
-
-
+    
+    
     func getContentsOfKey(key: String) -> String? {
-        let service = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleIdentifier") as String
-
-        let keychainQuery = NSMutableDictionary(objects: [kSecClassGenericPasswordValue, service,              key,                  kCFBooleanTrue,      kSecMatchLimitOneValue],
+        
+        let keychainQuery = NSMutableDictionary(objects: [kSecClassGenericPasswordValue, serviceString(),      key,                  kCFBooleanTrue,      kSecMatchLimitOneValue],
                                                 forKeys: [kSecClassValue,                kSecAttrServiceValue, kSecAttrAccountValue, kSecReturnDataValue, kSecMatchLimitValue])
-
+        
         var dataTypeRef :Unmanaged<AnyObject>?
         let status = SecItemCopyMatching(keychainQuery, &dataTypeRef)
         let opaque = dataTypeRef?.toOpaque()
         var contentsOfKeychain: String?
         if let op = opaque? {
-            let retrievedData = Unmanaged<NSData>.fromOpaque(op).takeUnretainedValue()
-            contentsOfKeychain = String(NSString(data: retrievedData, encoding: NSUTF8StringEncoding))
+            let retrievedData: NSData = Unmanaged<NSData>.fromOpaque(op).takeUnretainedValue()
+            contentsOfKeychain = NSString(data: retrievedData, encoding: NSUTF8StringEncoding)
         } else {
             devPrintln("Nothing was retrieved from the keychain. Status code \(status)")
         }
         return  contentsOfKeychain
     }
-
+    
+    private func serviceString() -> String {
+        return NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleIdentifier") as String
+    }
 }
