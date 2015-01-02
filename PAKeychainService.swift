@@ -36,7 +36,7 @@ class PAKeychainService: NSObject {
         let dataFromString = value.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)!
         
         let keychainQuery = NSMutableDictionary(objects: [kSecClassGenericPasswordValue, serviceString(),      key,                  dataFromString],
-                                                forKeys: [kSecClassValue,                kSecAttrServiceValue, kSecAttrAccountValue, kSecValueDataValue])
+            forKeys: [kSecClassValue,                kSecAttrServiceValue, kSecAttrAccountValue, kSecValueDataValue])
         
         SecItemDelete(keychainQuery as CFDictionaryRef)
         SecItemAdd(keychainQuery as CFDictionaryRef, nil)
@@ -46,19 +46,10 @@ class PAKeychainService: NSObject {
     func getContentsOfKey(key: String) -> String? {
         
         let keychainQuery = NSMutableDictionary(objects: [kSecClassGenericPasswordValue, serviceString(),      key,                  kCFBooleanTrue,      kSecMatchLimitOneValue],
-                                                forKeys: [kSecClassValue,                kSecAttrServiceValue, kSecAttrAccountValue, kSecReturnDataValue, kSecMatchLimitValue])
+            forKeys: [kSecClassValue,                kSecAttrServiceValue, kSecAttrAccountValue, kSecReturnDataValue, kSecMatchLimitValue])
         
-        var dataTypeRef :Unmanaged<AnyObject>?
-        let status = SecItemCopyMatching(keychainQuery, &dataTypeRef)
-        let opaque = dataTypeRef?.toOpaque()
-        var contentsOfKeychain: String?
-        if let op = opaque? {
-            let retrievedData: NSData = Unmanaged<NSData>.fromOpaque(op).takeUnretainedValue()
-            contentsOfKeychain = NSString(data: retrievedData, encoding: NSUTF8StringEncoding)
-        } else {
-            devPrintln("Nothing was retrieved from the keychain. Status code \(status)")
-        }
-        return  contentsOfKeychain
+        // we do the read in Objective-C to work around a Swift compiler optimization bug (as of Xcode 6.2 (6C101) which resulted in no data being returned
+        return  KeychainObjCWrapper.keychainValueForDictionary(keychainQuery)
     }
     
     private func serviceString() -> String {
